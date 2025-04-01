@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sticky Notes App</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #2e2e2e;
+      color: #fff;
+    }
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+    .sidebar {
+      background-color: #3a3a3a;
+      padding: 20px;
+      width: 250px;
+    }
+    .sidebar h2 {
+      margin-bottom: 10px;
+    }
+    .sidebar input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #555;
+      margin-bottom: 5px;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .sidebar li .delete-topic {
+      background: transparent;
+      border: none;
+      color: red;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .note-area {
+      flex: 1;
+      padding: 20px;
+      background-color: #2e2e2e;
+      overflow: hidden;
+      position: relative;
+    }
+    #notes-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .note {
+      width: 250px;
+      height: 150px;
+      background-color: #cc9c33;
+      padding: 10px;
+      border-radius: 8px;
+      position: absolute;
+      cursor: grab;
+      border: 2px solid black;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+      box-sizing: border-box;
+      overflow: auto;
+    }
+    .note .delete-note {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: red;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 20px;
+      text-align: center;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Topics</h2>
+      <input id="new-topic" placeholder="Type a topic and press Enter" />
+      <ul id="topic-list"></ul>
+    </aside>
+    <main class="note-area">
+      <button id="add-note">+ Add Note</button>
+      <div id="notes-container"></div>
+    </main>
+  </div>
+  <script>
+    // Event Listeners
+    document.getElementById('add-note').addEventListener('click', addNote);
+    document.getElementById('new-topic').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') addTopic(this.value.trim());
+    });
+    
+    // Global variables for topics and current topic
+    let topics = JSON.parse(localStorage.getItem('topics')) || {};
+    let currentTopic = null;
+    
+    // Function to add a note to the current topic
+    function addNote() {
+      if (!currentTopic) {
+        alert('Select a topic first!');
+        return;
+      }
+      const note = createNoteElement('');
+      // Randomize initial placement
+      note.style.left = (Math.random() * 600) + 'px';
+      note.style.top = (Math.random() * 300) + 'px';
+      document.getElementById('notes-container').appendChild(note);
+      saveNotes();
+    }
+    
+    // Create a note element with delete button and dragging events
+    function createNoteElement(text) {
+      const note = document.createElement('div');
+      note.classList.add('note');
+      note.setAttribute('contenteditable', 'true');
+      // Set text (innerHTML so we can add child elements later)
+      note.innerHTML = text;
+      
+      // Create delete button for note
+      const delBtn = document.createElement('button');
+      delBtn.classList.add('delete-note');
+      delBtn.textContent = '×';
+      delBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        note.remove();
+        saveNotes();
+      });
+      note.appendChild(delBtn);
+      
+      // Drag event
+      note.addEventListener('mousedown', function(e) {
+        if (e.target.classList.contains('delete-note')) return;
+        dragNote(e, note);
+      });
+      
+      return note;
+    }
+    
+    // Drag function that ensures the note follows the cursor precisely
+    function dragNote(event, note) {
+      event.preventDefault();
+      const rect = note.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      const offsetY = event.clientY - rect.top;
+      
+      note.style.cursor = 'grabbing';
+      
+      function moveAt(pageX, pageY) {
+        note.style.left = (pageX - offsetX) + 'px';
+        note.style.top = (pageY - offsetY) + 'px';
+      }
+      
+      moveAt(event.pageX, event.pageY);
+      
+      function onMouseMove(e) {
+        moveAt(e.pageX, e.pageY);
+      }
+      
+      document.addEventListener('mousemove', onMouseMove);
+      
+      document.addEventListener('mouseup', function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        note.style.cursor = 'grab';
+        saveNotes();
+      });
+    }
+    
+    // Function to add a new topic
+    function addTopic(topicName) {
+      if (!topicName || topics[topicName]) return;
+      topics[topicName] = [];
+      updateTopics();
+      document.getElementById('new-topic').value = '';
+    }
+    
+    // Update topics list in the sidebar
+    function updateTopics() {
+      const topicList = document.getElementById('topic-list');
+      topicList.innerHTML = '';
+      
+      for (const topic in topics) {
+        const li = document.createElement('li');
+        const span = document.createElement('span');
+        span.textContent = topic;
+        li.appendChild(span);
+        
+        li.addEventListener('click', function() {
+          selectTopic(topic);
+        });
+        
+        const delBtn = document.createElement('button');
+        delBtn.classList.add('delete-topic');
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          delete topics[topic];
+          if (currentTopic === topic) {
+            currentTopic = null;
+            document.getElementById('notes-container').innerHTML = '';
+          }
+          updateTopics();
+          localStorage.setItem('topics', JSON.stringify(topics));
+        });
+        li.appendChild(delBtn);
+        topicList.appendChild(li);
+      }
+      localStorage.setItem('topics', JSON.stringify(topics));
+    }
+    
+    // Select a topic and display its notes
+    function selectTopic(topic) {
+      currentTopic = topic;
+      document.getElementById('notes-container').innerHTML = '';
+      topics[topic].forEach(function(noteData) {
+        const note = createNoteElement(noteData.text);
+        note.style.left = noteData.left;
+        note.style.top = noteData.top;
+        document.getElementById('notes-container').appendChild(note);
+      });
+    }
+    
+    // Save notes to local storage for the current topic
+    function saveNotes() {
+      if (!currentTopic) return;
+      const notes = [];
+      document.querySelectorAll('#notes-container .note').forEach(function(note) {
+        // Extract text content excluding the delete button text
+        let content = '';
+        note.childNodes.forEach(function(child) {
+          if (child.nodeType === Node.TEXT_NODE) content += child.textContent;
+        });
+        content = content.trim();
+        notes.push({
+          text: content,
+          left: note.style.left,
+          top: note.style.top
+        });
+      });
+      topics[currentTopic] = notes;
+      localStorage.setItem('topics', JSON.stringify(topics));
+    }
+    
+    updateTopics();
+  </script>
+</body>
+</html>
