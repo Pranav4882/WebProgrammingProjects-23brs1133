@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escape the Light</title>
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      height: 100%;
+      font-family: 'Montserrat', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      overflow: hidden;
+      color: #fff;
+    }
+    /* Header Styles */
+    header {
+      text-align: center;
+      padding: 20px 0;
+      font-size: 2.5em;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    }
+    /* Center the canvas */
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: transparent;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+    }
+    /* Overlay for game over */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      text-align: center;
+    }
+    #overlay.hidden {
+      display: none;
+    }
+    #message {
+      font-size: 2em;
+      line-height: 1.5;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      border: none;
+      background: #ff9800;
+      color: #fff;
+      font-size: 1em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #e68900;
+    }
+  </style>
+</head>
+<body>
+  <header>Escape the Light</header>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="overlay" class="hidden">
+    <div id="message">
+      Game Over!<br />
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let keys = {};
+    document.addEventListener('keydown', (e) => (keys[e.key] = true));
+    document.addEventListener('keyup', (e) => (keys[e.key] = false));
+
+    // Utility function for distance
+    function distance(x1, y1, x2, y2) {
+      return Math.hypot(x1 - x2, y1 - y2);
+    }
+
+    // Game state variables
+    let gameOver = false;
+    const player = { x: canvas.width / 2, y: canvas.height / 2, radius: 15, speed: 4 };
+    let lights = [];
+    const initialNumLights = 5;
+
+    // Create a new light with increased speed
+    function createLight() {
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: 30 + Math.random() * 20,
+        speedX: (Math.random() * 2 - 1) * 4,  // Increased speed multiplier
+        speedY: (Math.random() * 2 - 1) * 4
+      };
+    }
+
+    // Initialize moving light sources with random positions and speeds
+    function initLights() {
+      lights = [];
+      for (let i = 0; i < initialNumLights; i++) {
+        lights.push(createLight());
+      }
+    }
+
+    // Update player and light positions
+    function update() {
+      // Player movement (Arrow keys or WASD)
+      if (keys["ArrowUp"] || keys["w"]) player.y -= player.speed;
+      if (keys["ArrowDown"] || keys["s"]) player.y += player.speed;
+      if (keys["ArrowLeft"] || keys["a"]) player.x -= player.speed;
+      if (keys["ArrowRight"] || keys["d"]) player.x += player.speed;
+
+      // Keep player within canvas bounds
+      player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+      player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+      // Update light positions and bounce off walls
+      lights.forEach((light) => {
+        light.x += light.speedX;
+        light.y += light.speedY;
+        if (light.x - light.radius < 0 || light.x + light.radius > canvas.width) light.speedX *= -1;
+        if (light.y - light.radius < 0 || light.y + light.radius > canvas.height) light.speedY *= -1;
+      });
+
+      // Check collision: if player's shadow touches any light, it's game over.
+      for (let light of lights) {
+        if (distance(player.x, player.y, light.x, light.y) < player.radius + light.radius * 0.6) {
+          gameOver = true;
+          overlay.classList.remove("hidden");
+        }
+      }
+    }
+
+    // Draw the game elements on the canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw glowing light sources with a radial gradient effect
+      lights.forEach((light) => {
+        let gradient = ctx.createRadialGradient(light.x, light.y, light.radius * 0.1, light.x, light.y, light.radius);
+        gradient.addColorStop(0, "rgba(255, 255, 224, 0.8)");
+        gradient.addColorStop(0.7, "rgba(255, 255, 224, 0.2)");
+        gradient.addColorStop(1, "rgba(255, 255, 224, 0)");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(light.x, light.y, light.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw the player's shadow as a dark circle with a subtle glow
+      let pGradient = ctx.createRadialGradient(player.x, player.y, player.radius * 0.1, player.x, player.y, player.radius);
+      pGradient.addColorStop(0, "rgba(20, 20, 20, 1)");
+      pGradient.addColorStop(1, "rgba(20, 20, 20, 0.7)");
+      ctx.fillStyle = pGradient;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Main game loop using requestAnimationFrame for smooth animations
+    function gameLoop() {
+      if (!gameOver) {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // Restart the game when the button is clicked
+    restartBtn.addEventListener("click", () => {
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+      gameOver = false;
+      overlay.classList.add("hidden");
+      initLights();
+      gameLoop();
+    });
+
+    // Initialize lights and start the game loop
+    initLights();
+    gameLoop();
+
+    // Every minute, add an additional light ball to increase the challenge
+    setInterval(() => {
+      lights.push(createLight());
+    }, 60000);
+  </script>
+</body>
+</html>
