@@ -157,7 +157,7 @@
     }
 
     #aboutMePage {
-      display: none; 
+      display: none;
       position: absolute;
       top: 0;
       left: 0;
@@ -171,7 +171,7 @@
     .about-container {
       width: 60%;
       height: 60%;
-      background-color: #1e1e1e; 
+      background-color: #1e1e1e;
       color: #fff;
       padding: 40px;
       border-radius: 12px;
@@ -209,19 +209,19 @@
       <div class="center-bubble" id="centerBubble">
         Hi I'm Pranav, this is my portfolio containing my projects.
       </div>
-      <div class="project-bubble bubble-1" data-project="Project 1" data-link="https://github.com/dummyproject1">
+      <div class="project-bubble bubble-1" data-project="Project 1" data-link="https://pranav4882.github.io/WebProgrammingProjects-23brs1133/battleship.html">
         Project 1
       </div>
-      <div class="project-bubble bubble-2" data-project="Project 2" data-link="https://github.com/dummyproject2">
+      <div class="project-bubble bubble-2" data-project="Project 2" data-link="https://pranav4882.github.io/WebProgrammingProjects-23brs1133/focus-unfocus.html">
         Project 2
       </div>
-      <div class="project-bubble bubble-3" data-project="Project 3" data-link="https://github.com/dummyproject3">
+      <div class="project-bubble bubble-3" data-project="Project 3" data-link="https://pranav4882.github.io/WebProgrammingProjects-23brs1133/lightescape.html">
         Project 3
       </div>
-      <div class="project-bubble bubble-4" data-project="Project 4" data-link="https://github.com/dummyproject4">
+      <div class="project-bubble bubble-4" data-project="Project 4" data-link="https://pranav4882.github.io/WebProgrammingProjects-23brs1133/notepad.html">
         Project 4
       </div>
-      <div class="project-bubble bubble-5" data-project="Project 5" data-link="https://github.com/dummyproject5">
+      <div class="project-bubble bubble-5" data-project="Project 5" data-link="https://pranav4882.github.io/WebProgrammingProjects-23brs1133/snakesandladders.html">
         Project 5
       </div>
     </div>
@@ -235,7 +235,9 @@
     </div>
   </div>
 
-
+  <div id="aboutMePage">
+      <div class="about-back" id="aboutBackButton">X</div>
+  </div>
 
   <script>
     const projectDescriptions = {
@@ -258,7 +260,7 @@
     const aboutBackButton = document.getElementById('aboutBackButton');
     const projectBubbles = document.querySelectorAll('.project-bubble');
     let currentProjectLink = "";
-
+-
     startButton.addEventListener('click', () => {
       startButton.textContent = "";
       startButton.classList.add('clicked');
