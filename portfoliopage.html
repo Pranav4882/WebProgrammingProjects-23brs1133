@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pranav's Portfolio</title>
   <style>
-    /* Global Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html { height: 100%; overflow: hidden; background-color: #000; font-family: Arial, sans-serif; }
 
-    /* --- Intro Screen --- */
     #intro {
       position: relative;
       width: 100%;
@@ -48,8 +46,7 @@
         background-color: #fff;
       }
     }
-
-    /* --- Main Portfolio View --- */
+    
     #portfolio {
       position: absolute;
       top: 0;
@@ -69,7 +66,6 @@
       width: 90%;
       height: 90%;
     }
-    /* Center bubble (Introduction) */
     .center-bubble {
       position: absolute;
       top: 50%;
@@ -90,7 +86,6 @@
       z-index: 2;
       cursor: pointer;
     }
-    /* Project bubbles */
     .project-bubble {
       position: absolute;
       width: 200px;
@@ -118,14 +113,12 @@
         background-color: #fff;
       }
     }
-    /* Positioning for project bubbles */
     .bubble-1 { top: 7%; left: 25%; }
     .bubble-2 { top: 7%; right: 25%; }
     .bubble-3 { bottom: 25%; left: 15%; }
     .bubble-4 { bottom: 25%; right: 15%; }
     .bubble-5 { bottom: -1%; left: 43%; }
 
-    /* --- Project Modal Overview --- */
     #projectModal {
       position: fixed;
       top: 0;
@@ -163,9 +156,8 @@
       transform: scale(1.1);
     }
 
-    /* --- About Me Overlay --- */
     #aboutMePage {
-      display: none; /* Hidden initially */ 
+      display: none;
       position: absolute;
       top: 0;
       left: 0;
@@ -179,7 +171,7 @@
     .about-container {
       width: 60%;
       height: 60%;
-      background-color: #1e1e1e; /* Grayish-black */ 
+      background-color: #1e1e1e;
       color: #fff;
       padding: 40px;
       border-radius: 12px;
@@ -208,19 +200,15 @@
   </style>
 </head>
 <body>
-  <!-- Intro Screen -->
   <div id="intro">
     <button class="orb" id="startButton">click</button>
   </div>
 
-  <!-- Main Portfolio View -->
   <div id="portfolio">
     <div class="bubbles">
-      <!-- Center Bubble (Introduction) -->
       <div class="center-bubble" id="centerBubble">
         Hi I'm Pranav, this is my portfolio containing my projects.
       </div>
-      <!-- Project Bubbles -->
       <div class="project-bubble bubble-1" data-project="Project 1" data-link="https://github.com/dummyproject1">
         Project 1
       </div>
@@ -239,7 +227,6 @@
     </div>
   </div>
 
-  <!-- Project Modal Overview -->
   <div id="projectModal">
     <div class="modal-content">
       <p id="projectDescription">This is a project overview.</p>
@@ -248,16 +235,13 @@
     </div>
   </div>
 
-  <!-- About Me Overlay (activated when center bubble is clicked) -->
   <div id="aboutMePage">
     <div class="about-container">
       <div class="about-back" id="aboutBackButton">X</div>
-      <!-- Write here: Add your introduction content. -->
     </div>
   </div>
 
   <script>
-    // Define project descriptions
     const projectDescriptions = {
       "Project 1": "It simulates the game 'Battleships' using HTML, CSS, and JS. Players take turns placing ships and firing shots. The first player to sink all enemy ships wins!",
       "Project 2": "Focus-Unfocus is a website using the Pomodoro technique. A timer runs with peaceful animations and music during focus time, and stops for breaks to let you rest.",
@@ -266,7 +250,6 @@
       "Project 5": "A simple Snakes and Ladders game for two players. Players roll dice, move on the board, climb ladders, and avoid snakes. First to the top wins!"
     };
 
-    // References to elements
     const startButton = document.getElementById('startButton');
     const intro = document.getElementById('intro');
     const portfolio = document.getElementById('portfolio');
@@ -280,7 +263,6 @@
     const projectBubbles = document.querySelectorAll('.project-bubble');
     let currentProjectLink = "";
 
-    // --- Transition from Intro to Portfolio ---
     startButton.addEventListener('click', () => {
       startButton.textContent = "";
       startButton.classList.add('clicked');
@@ -291,7 +273,6 @@
       }, 1000);
     });
 
-    // --- Center Bubble Click: Show About Me Overlay ---
     centerBubble.addEventListener('click', () => {
       aboutMePage.style.display = 'flex';
     });
@@ -299,7 +280,6 @@
       aboutMePage.style.display = 'none';
     });
 
-    // --- Project Bubble Clicks ---
     projectBubbles.forEach(bubble => {
       bubble.addEventListener('click', function() {
         if (this.classList.contains('clicked')) return;
@@ -315,12 +295,10 @@
       });
     });
 
-    // --- Modal "Go to Project" Click ---
     goToProject.addEventListener('click', () => {
       window.open(currentProjectLink, '_blank');
     });
 
-    // --- Modal "Back" Button Click ---
     backButton.addEventListener('click', () => {
       window.location.reload();
     });
