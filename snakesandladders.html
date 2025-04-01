@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Snakes & Ladders</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #ffe4b5;
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
+  .container {
+    text-align: center;
+  }
+  canvas {
+    border: 5px solid #333;
+    background: url('snl.jpg') no-repeat;
+    background-size: cover;
+  }
+  h1 {
+    font-size: 4rem;
+    color: #ff6347;
+    margin-bottom: 20px;
+  }
+  button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 1.5rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  .dice {
+    margin: 20px;
+    font-size: 5rem;
+    height: 100px;
+    width: 100px;
+    line-height: 100px;
+    border-radius: 20px;
+    background-color: #fff;
+    border: 4px solid #333;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Snakes & Ladders</h1>
+  <canvas id="board" width="600" height="600"></canvas>
+  <div id="dice" class="dice">🎲</div>
+  <button id="rollBtn">Roll Dice</button>
+  <p id="status"></p>
+</div>
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const size = 10;
+const tileSize = canvas.width / size;
+const players = [{ color: 'red', pos: 1 }, { color: 'blue', pos: 1 }];
+let currentPlayer = 0;
+const snakes = { 14: 7, 19: 5, 22: 2, 29: 9, 35: 17, 48: 26, 53: 33, 64: 44, 79: 55, 93: 73 };
+const ladders = { 4: 14, 8: 30, 15: 34, 21: 42, 28: 76, 41: 60, 50: 71, 66: 87, 74: 94, 81: 99 };
+
+drawPlayers();
+
+function drawPlayers() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  players.forEach(player => {
+    const { x, y } = getCoordinates(player.pos);
+    ctx.beginPath();
+    ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize / 4, 0, Math.PI * 2);
+    ctx.fillStyle = player.color;
+    ctx.fill();
+  });
+}
+
+function getCoordinates(pos) {
+  const row = Math.floor((pos - 1) / size);
+  const col = row % 2 === 0 ? (pos - 1) % size : size - 1 - ((pos - 1) % size);
+  return { x: col * tileSize, y: (size - row - 1) * tileSize };
+}
+
+document.getElementById('rollBtn').addEventListener('click', rollDice);
+
+function rollDice() {
+  const diceElement = document.getElementById('dice');
+  let roll = 1 + Math.floor(Math.random() * 6);
+  let animationCount = 10;
+
+  const animation = setInterval(() => {
+    diceElement.textContent = Math.ceil(Math.random() * 6);
+    animationCount--;
+    if (animationCount <= 0) {
+      clearInterval(animation);
+      diceElement.textContent = roll;
+      movePlayer(roll);
+    }
+  }, 100);
+}
+
+function movePlayer(roll) {
+  document.getElementById('status').innerText = `Player ${currentPlayer + 1} rolled a ${roll}`;
+  players[currentPlayer].pos += roll;
+
+  if (players[currentPlayer].pos > 100) {
+    players[currentPlayer].pos = 100;
+  }
+
+  if (snakes[players[currentPlayer].pos]) {
+    players[currentPlayer].pos = snakes[players[currentPlayer].pos];
+  } else if (ladders[players[currentPlayer].pos]) {
+    players[currentPlayer].pos = ladders[players[currentPlayer].pos];
+  }
+
+  if (players[currentPlayer].pos === 100) {
+    document.getElementById('status').innerText = `Player ${currentPlayer + 1} wins!`;
+    document.getElementById('rollBtn').disabled = true;
+    return;
+  }
+
+  currentPlayer = (currentPlayer + 1) % players.length;
+  drawPlayers();
+}
+</script>
+</body>
+</html>
