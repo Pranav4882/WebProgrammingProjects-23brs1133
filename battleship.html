@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Elegant Battleship Game</title>
+  <!-- Google Fonts for aesthetics -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* Overall page styling using elegant fonts and colors */
+    body {
+      background: #faf7f2;
+      font-family: 'Roboto', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+      color: #3e3e3e;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      color: #5d3a00;
+      margin-bottom: 10px;
+    }
+    #controls {
+      margin-bottom: 10px;
+    }
+    #controls button {
+      background: #d9b38c;
+      border: none;
+      padding: 10px 15px;
+      margin-right: 5px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    #controls button:hover {
+      background: #c99a78;
+    }
+    #status {
+      margin: 10px;
+      font-size: 20px;
+      font-weight: 500;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    .board-container {
+      display: inline-block;
+      margin: 10px;
+    }
+    .board-title {
+      text-align: center;
+      font-weight: 500;
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 2px;
+      perspective: 500px;
+      padding: 5px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    /* Board themes for each player */
+    .board[data-player="1"] {
+      background: #e8f4fc;
+      border: 2px solid #4a90e2;
+    }
+    .board[data-player="2"] {
+      background: #fde8e8;
+      border: 2px solid #e24a4a;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(145deg, #ffffff, #f0f0f0);
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.1s, background 0.3s;
+      border-radius: 4px;
+      position: relative;
+      font-family: 'Roboto', sans-serif;
+    }
+    .cell:hover {
+      transform: translateY(-2px);
+    }
+    /* Ship styling during placement on active board only */
+    .active-board .cell.ship-player1 {
+      background: #9cd3f2;
+    }
+    .active-board .cell.ship-player2 {
+      background: #f29c9c;
+    }
+    /* Hit cells */
+    .cell.hit {
+      background: #e24a4a !important;
+      color: #ffffff;
+      font-weight: bold;
+    }
+    /* Destroyed animation for sunk ships */
+    @keyframes fireAnimation {
+      0% { background-color: #f5e663; }
+      50% { background-color: #f5a623; }
+      100% { background-color: #f5e663; }
+    }
+    .cell.destroyed {
+      animation: fireAnimation 1s infinite;
+      color: #3e3e3e;
+      font-weight: bold;
+    }
+    /* Missed shots */
+    .cell.miss {
+      background: #a3d8f7;
+    }
+    /* Hidden board styling (when not active during placement) */
+    .hidden-board {
+      background: #cccccc;
+      pointer-events: none;
+      filter: blur(4px);
+    }
+  </style>
+</head>
+<body>
+  <h1>Elegant Battleship</h1>
+  <div id="controls">
+    <button id="toggleOrientation">Orientation: Horizontal</button>
+    <button id="resetBtn">Reset Game</button>
+  </div>
+  <div id="status">Player 1: Place your ship of size 5</div>
+  <div id="boards">
+    <div class="board-container">
+      <div class="board-title" id="playerTitle">Player 1 Board</div>
+      <div id="player-board" class="board"></div>
+    </div>
+    <div class="board-container">
+      <div class="board-title" id="opponentTitle">Player 2 Board</div>
+      <div id="opponent-board" class="board"></div>
+    </div>
+  </div>
+
+  <script>
+    // Game constants
+    const BOARD_SIZE = 10;
+    const SHIP_SIZES = [5, 4, 3, 2];
+    const PHASES = {
+      PLACEMENT: 'placement',
+      BATTLE: 'battle'
+    };
+
+    // Game state variables
+    let gamePhase = PHASES.PLACEMENT;
+    let currentPlayer = 1; // 1 or 2
+    let orientation = 'horizontal'; // or 'vertical'
+    let gameOver = false;
+    let players = {
+      1: { board: [], ships: [], shipsToPlace: [...SHIP_SIZES] },
+      2: { board: [], ships: [], shipsToPlace: [...SHIP_SIZES] }
+    };
+
+    // Create board arrays with additional properties.
+    function createEmptyBoard() {
+      const board = [];
+      for (let i = 0; i < BOARD_SIZE; i++) {
+        const row = [];
+        for (let j = 0; j < BOARD_SIZE; j++) {
+          row.push({ ship: null, hit: false, destroyed: false });
+        }
+        board.push(row);
+      }
+      return board;
+    }
+    players[1].board = createEmptyBoard();
+    players[2].board = createEmptyBoard();
+
+    // DOM elements
+    const playerBoardEl = document.getElementById('player-board');
+    const opponentBoardEl = document.getElementById('opponent-board');
+    const statusEl = document.getElementById('status');
+    const toggleOrientationBtn = document.getElementById('toggleOrientation');
+    const resetBtn = document.getElementById('resetBtn');
+    const playerTitleEl = document.getElementById('playerTitle');
+    const opponentTitleEl = document.getElementById('opponentTitle');
+
+    // Render a board; if "active" then show placements, otherwise hide details.
+    function renderBoard(boardEl, boardData, clickable, boardPlayer) {
+      boardEl.innerHTML = '';
+      boardEl.setAttribute('data-player', boardPlayer);
+      let isActive = (gamePhase === PHASES.PLACEMENT && boardPlayer === currentPlayer);
+      // Add a class to show active board styling for ship placements.
+      if (isActive) boardEl.classList.add('active-board');
+      else boardEl.classList.remove('active-board');
+      
+      for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = i;
+          cell.dataset.col = j;
+          
+          // During placement phase, only show ships on the active board.
+          if (isActive && boardData[i][j].ship) {
+            cell.classList.add(boardPlayer === 1 ? 'ship-player1' : 'ship-player2');
+          }
+          
+          // During battle phase, show hits, misses, and destroyed animation.
+          if (boardData[i][j].hit) {
+            if (boardData[i][j].ship) {
+              if (boardData[i][j].destroyed) {
+                cell.classList.add('destroyed');
+                cell.textContent = 'X';
+              } else {
+                cell.classList.add('hit');
+                cell.textContent = 'X';
+              }
+            } else {
+              cell.classList.add('miss');
+              cell.textContent = '•';
+            }
+          }
+          // For placement phase, if board is not active, hide its details.
+          if (gamePhase === PHASES.PLACEMENT && !isActive) {
+            cell.classList.add('hidden-board');
+            cell.textContent = '';
+          }
+          if (clickable) {
+            cell.addEventListener('click', cellClickHandler);
+          }
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    // Update both boards based on game phase and current player.
+    function renderBoards() {
+      if (gamePhase === PHASES.PLACEMENT) {
+        if (currentPlayer === 1) {
+          renderBoard(playerBoardEl, players[1].board, true, 1);
+          renderBoard(opponentBoardEl, players[2].board, false, 2);
+          playerTitleEl.textContent = 'Player 1 Board (Your Placement)';
+          opponentTitleEl.textContent = 'Player 2 Board (Hidden)';
+        } else {
+          renderBoard(playerBoardEl, players[2].board, true, 2);
+          renderBoard(opponentBoardEl, players[1].board, false, 1);
+          playerTitleEl.textContent = 'Player 2 Board (Your Placement)';
+          opponentTitleEl.textContent = 'Player 1 Board (Hidden)';
+        }
+      } else {
+        // Battle phase: both boards show current status.
+        if (currentPlayer === 1) {
+          renderBoard(playerBoardEl, players[1].board, false, 1);
+          renderBoard(opponentBoardEl, players[2].board, true, 2);
+          playerTitleEl.textContent = 'Player 1 Board';
+          opponentTitleEl.textContent = 'Player 2 Board (Your Target)';
+        } else {
+          renderBoard(playerBoardEl, players[2].board, false, 2);
+          renderBoard(opponentBoardEl, players[1].board, true, 1);
+          playerTitleEl.textContent = 'Player 2 Board';
+          opponentTitleEl.textContent = 'Player 1 Board (Your Target)';
+        }
+      }
+    }
+
+    // Check if a ship can be placed at (row, col) with given size and orientation.
+    function canPlaceShip(board, row, col, size, orientation) {
+      if (orientation === 'horizontal') {
+        if (col + size > BOARD_SIZE) return false;
+        for (let i = 0; i < size; i++) {
+          if (board[row][col + i].ship !== null) return false;
+        }
+      } else {
+        if (row + size > BOARD_SIZE) return false;
+        for (let i = 0; i < size; i++) {
+          if (board[row + i][col].ship !== null) return false;
+        }
+      }
+      return true;
+    }
+
+    // Place a ship on the board and return its positions.
+    function placeShip(board, row, col, size, orientation, shipId) {
+      const positions = [];
+      if (orientation === 'horizontal') {
+        for (let i = 0; i < size; i++) {
+          board[row][col + i].ship = shipId;
+          positions.push({ row, col: col + i });
+        }
+      } else {
+        for (let i = 0; i < size; i++) {
+          board[row + i][col].ship = shipId;
+          positions.push({ row: row + i, col });
+        }
+      }
+      return positions;
+    }
+
+    // Handler for cell clicks during placement or battle.
+    function cellClickHandler(e) {
+      // Prevent any clicks if the game is over.
+      if (gameOver) return;
+      
+      const row = parseInt(e.target.dataset.row);
+      const col = parseInt(e.target.dataset.col);
+      let activePlayer, opponent;
+      if (gamePhase === PHASES.PLACEMENT) {
+        activePlayer = players[currentPlayer];
+      } else {
+        activePlayer = players[currentPlayer];
+        opponent = currentPlayer === 1 ? players[2] : players[1];
+      }
+
+      // PLACEMENT PHASE
+      if (gamePhase === PHASES.PLACEMENT) {
+        const size = activePlayer.shipsToPlace[0];
+        if (canPlaceShip(activePlayer.board, row, col, size, orientation)) {
+          const shipId = `P${currentPlayer}_S${size}_${Date.now()}`;
+          const positions = placeShip(activePlayer.board, row, col, size, orientation, shipId);
+          activePlayer.ships.push({ id: shipId, size, positions, hits: 0 });
+          activePlayer.shipsToPlace.shift();
+          if (activePlayer.shipsToPlace.length > 0) {
+            statusEl.textContent = `Player ${currentPlayer}: Place your ship of size ${activePlayer.shipsToPlace[0]}`;
+          } else {
+            if (currentPlayer === 1) {
+              currentPlayer = 2;
+              statusEl.textContent = `Player ${currentPlayer}: Place your ship of size ${players[currentPlayer].shipsToPlace[0]}`;
+            } else {
+              gamePhase = PHASES.BATTLE;
+              currentPlayer = 1;
+              statusEl.textContent = `Battle Phase: Player ${currentPlayer}'s turn to attack`;
+            }
+          }
+          renderBoards();
+        } else {
+          alert("Invalid placement. Choose another cell or adjust orientation.");
+        }
+      } 
+      // BATTLE PHASE
+      else if (gamePhase === PHASES.BATTLE) {
+        opponent = currentPlayer === 1 ? players[2] : players[1];
+        if (opponent.board[row][col].hit) {
+          alert("You already attacked this cell.");
+          return;
+        }
+        opponent.board[row][col].hit = true;
+        if (opponent.board[row][col].ship) {
+          const shipId = opponent.board[row][col].ship;
+          const ship = opponent.ships.find(s => s.id === shipId);
+          ship.hits++;
+          statusEl.textContent = `Player ${currentPlayer} hit a ship!`;
+          if (ship.hits === ship.size) {
+            statusEl.textContent = `Player ${currentPlayer} sunk a ship of size ${ship.size}!`;
+            ship.positions.forEach(pos => {
+              opponent.board[pos.row][pos.col].destroyed = true;
+            });
+          }
+          const allSunk = opponent.ships.every(s => s.hits === s.size);
+          if (allSunk) {
+            statusEl.textContent = `Player ${currentPlayer} wins! Game Over.`;
+            gameOver = true;
+            renderBoards();
+            return;
+          }
+        } else {
+          statusEl.textContent = `Player ${currentPlayer} missed.`;
+          currentPlayer = currentPlayer === 1 ? 2 : 1;
+          setTimeout(() => {
+            statusEl.textContent = `Battle Phase: Player ${currentPlayer}'s turn to attack`;
+            renderBoards();
+          }, 500);
+        }
+        renderBoards();
+      }
+    }
+
+    // Toggle ship placement orientation.
+    toggleOrientationBtn.addEventListener('click', () => {
+      orientation = orientation === 'horizontal' ? 'vertical' : 'horizontal';
+      toggleOrientationBtn.textContent = `Orientation: ${orientation.charAt(0).toUpperCase() + orientation.slice(1)}`;
+    });
+
+    // Reset game button.
+    resetBtn.addEventListener('click', resetGame);
+    function resetGame() {
+      gamePhase = PHASES.PLACEMENT;
+      currentPlayer = 1;
+      gameOver = false;
+      players[1] = { board: createEmptyBoard(), ships: [], shipsToPlace: [...SHIP_SIZES] };
+      players[2] = { board: createEmptyBoard(), ships: [], shipsToPlace: [...SHIP_SIZES] };
+      statusEl.textContent = `Player 1: Place your ship of size ${players[1].shipsToPlace[0]}`;
+      renderBoards();
+    }
+
+    // Initial render.
+    renderBoards();
+  </script>
+</body>
+</html>
