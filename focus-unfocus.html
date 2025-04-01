@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focusmode</title>
+  <!-- Using a gentle Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* Global Styles and Background Video */
+    body {
+      margin: 0;
+      font-family: 'Nunito', sans-serif;
+      color: #273c75; /* soft dark blue for text */
+      overflow: hidden;
+      position: relative;
+      background: #dbeafe;
+      animation: fadeIn 2s ease forwards;
+    }
+    /* Fade in Animation for entire body */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Background Video Styling */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      z-index: -1;
+      object-fit: cover;
+    }
+    /* Animated Lava Lamp-Like Background Overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe, #93c5fd);
+      background-size: 400% 400%;
+      animation: backgroundAnimation 20s ease infinite;
+      z-index: -2;
+    }
+    @keyframes backgroundAnimation {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    /* Fade-in for elements */
+    .fade-in {
+      opacity: 0;
+      animation: fadeInElement 2s ease forwards;
+    }
+    @keyframes fadeInElement {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Focusmode Container */
+    .focusmode {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+      position: relative;
+      z-index: 1;
+    }
+    .focusmode__time {
+      font-size: 5rem;
+      font-weight: 300;
+      margin: 1rem 0;
+    }
+    /* Bold and centered heading */
+    #focus-heading {
+      text-align: center;
+      font-size: 3rem;
+      font-weight: 700;
+      margin-top: 2rem;
+    }
+    /* Buttons */
+    .focusmode__buttons button {
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      margin: 0 0.5rem;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    #start { background-color: #4caf50; color: #fff; }
+    #pause { background-color: #f44336; color: #fff; }
+    #reset { background-color: #2196f3; color: #fff; }
+    /* Timer Settings */
+    .focusmode__settings {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+    .focusmode__settings label {
+      font-size: 1rem;
+      margin: 0 0.5rem;
+    }
+    .focusmode__settings input {
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      margin: 0 0.5rem;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+    /* Status and Progress Bar */
+    .focusmode__status span {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      text-transform: uppercase;
+    }
+    .focusmode__progress {
+      width: 300px;
+      height: 1rem;
+      background-color: #ccc;
+      margin-top: 1rem;
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    #progress {
+      width: 0%;
+      height: 100%;
+      background-color: #4caf50;
+      transition: width 0.3s ease;
+    }
+    /* Hide audio element */
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Video (supply your own file and rename accordingly) -->
+  <video id="bg-video" autoplay loop muted class="fade-in">
+    <source src="background-video.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <!-- Background Music (supply your own file and rename accordingly) -->
+  <audio id="background-music" loop>
+    <source src="peaceful-music.mp3" type="audio/mp3">
+    Your browser does not support the audio element.
+  </audio>
+
+  <!-- Bold and Centered Heading -->
+  <h1 id="focus-heading" class="fade-in">Focus-Unfocus</h1>
+
+  <!-- Main Timer Container -->
+  <div class="focusmode fade-in">
+    <div class="focusmode__time">
+      <span id="minutes">25</span>:<span id="seconds">00</span>
+    </div>
+
+    <!-- Control Buttons -->
+    <div class="focusmode__buttons fade-in">
+      <button id="start">Start</button>
+      <button id="pause">Pause</button>
+      <button id="reset">Reset</button>
+    </div>
+
+    <!-- Timer Settings -->
+    <div class="focusmode__settings fade-in">
+      <label for="work-time">Focus Time</label>
+      <input type="number" id="work-time" value="25" min="1" max="59" />
+      <label for="break-time">Destress Time</label>
+      <input type="number" id="break-time" value="5" min="1" max="15" />
+    </div>
+
+    <!-- Display the Current Timer Mode -->
+    <div class="focusmode__status fade-in">
+      <span id="status">Focus</span>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="focusmode__progress fade-in">
+      <div id="progress"></div>
+    </div>
+  </div>
+
+  <script>
+    // Timer Variables
+    let timeLeft;
+    let workTime = 25;
+    let breakTime = 5;
+    let isWorkTime = true;
+    let timerId = null;
+    
+    // DOM Elements
+    const minutesDisplay = document.getElementById("minutes");
+    const secondsDisplay = document.getElementById("seconds");
+    const startButton = document.getElementById("start");
+    const pauseButton = document.getElementById("pause");
+    const resetButton = document.getElementById("reset");
+    const workTimeInput = document.getElementById("work-time");
+    const breakTimeInput = document.getElementById("break-time");
+    const statusDisplay = document.getElementById("status");
+    const progressBar = document.getElementById("progress");
+    const focusHeading = document.getElementById("focus-heading");
+    const backgroundMusic = document.getElementById("background-music");
+    
+    // Ensure music starts at full volume
+    backgroundMusic.volume = 1.0;
+    
+    // Initialize Timer with Focus Time
+    function initTimer() {
+      timeLeft = workTime * 60;
+      updateDisplay();
+    }
+    
+    // Update Timer Display
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      minutesDisplay.textContent = minutes.toString().padStart(2, "0");
+      secondsDisplay.textContent = seconds.toString().padStart(2, "0");
+      updateProgressBar();
+    }
+    
+    // Update Progress Bar
+    function updateProgressBar() {
+      const totalTime = isWorkTime ? workTime * 60 : breakTime * 60;
+      const progress = ((totalTime - timeLeft) / totalTime) * 100;
+      progressBar.style.width = progress + "%";
+      progressBar.style.backgroundColor = isWorkTime ? "#4caf50" : "#2196f3";
+    }
+    
+    // Fade out music over a given duration (ms)
+    function fadeOutMusic(duration) {
+      const fadeInterval = 50;
+      const steps = duration / fadeInterval;
+      const volumeStep = backgroundMusic.volume / steps;
+      const fadeAudioInterval = setInterval(() => {
+        if (backgroundMusic.volume > volumeStep) {
+          backgroundMusic.volume = Math.max(0, backgroundMusic.volume - volumeStep);
+        } else {
+          backgroundMusic.volume = 0;
+          backgroundMusic.pause();
+          clearInterval(fadeAudioInterval);
+        }
+      }, fadeInterval);
+    }
+    
+    // Fade in music quickly (reset volume to 1)
+    function fadeInMusic() {
+      backgroundMusic.volume = 0;
+      backgroundMusic.play();
+      const fadeInterval = 50;
+      const targetVolume = 1.0;
+      const volumeStep = 0.1;
+      const fadeAudioInterval = setInterval(() => {
+        if (backgroundMusic.volume < targetVolume - volumeStep) {
+          backgroundMusic.volume += volumeStep;
+        } else {
+          backgroundMusic.volume = targetVolume;
+          clearInterval(fadeAudioInterval);
+        }
+      }, fadeInterval);
+    }
+    
+    // Start Timer
+    function startTimer() {
+      if (timerId === null) {
+        timerId = setInterval(() => {
+          timeLeft--;
+          updateDisplay();
+          if (timeLeft === 0) switchMode();
+        }, 1000);
+      }
+      // In focus mode, ensure music is playing at full volume
+      if (isWorkTime) {
+        fadeInMusic();
+      }
+      startButton.disabled = true;
+      pauseButton.disabled = false;
+    }
+    
+    // Pause Timer
+    function pauseTimer() {
+      clearInterval(timerId);
+      timerId = null;
+      backgroundMusic.pause();
+      startButton.disabled = false;
+      pauseButton.disabled = true;
+    }
+    
+    // Reset Timer
+    function resetTimer() {
+      pauseTimer();
+      isWorkTime = true;
+      statusDisplay.textContent = "Focus";
+      focusHeading.textContent = "Focus-Unfocus";
+      backgroundMusic.volume = 1.0;
+      initTimer();
+    }
+    
+    // Switch Between Focus and Destress Modes
+    function switchMode() {
+      if (isWorkTime) {
+        fadeOutMusic(2000); // fade out over 2 seconds
+      }
+      isWorkTime = !isWorkTime;
+      timeLeft = (isWorkTime ? workTime : breakTime) * 60;
+      statusDisplay.textContent = isWorkTime ? "Focus" : "Destress";
+      focusHeading.textContent = isWorkTime ? "Focus-Unfocus" : "Destressmode";
+      updateDisplay();
+    }
+    
+    // Event Listeners
+    startButton.addEventListener("click", startTimer);
+    pauseButton.addEventListener("click", pauseTimer);
+    resetButton.addEventListener("click", resetTimer);
+    
+    workTimeInput.addEventListener("change", (event) => {
+      workTime = parseInt(event.target.value);
+      if (isWorkTime) resetTimer();
+    });
+    
+    breakTimeInput.addEventListener("change", (event) => {
+      breakTime = parseInt(event.target.value);
+      if (!isWorkTime) resetTimer();
+    });
+    
+    pauseButton.disabled = true;
+    initTimer();
+  </script>
+</body>
+</html>
