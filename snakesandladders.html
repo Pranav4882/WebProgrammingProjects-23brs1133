@@ -48,7 +48,6 @@
   .player2 { background: blue;   }
   .player3 { background: green;  }
   .player4 { background: orange; }
-
   /* Right panel with dice and info */
   #right-panel {
     width: 200px;
@@ -145,11 +144,10 @@
 <script>
 /* 
    Snakes and Ladders game using a custom board image.
-   Replace the URL in CSS for #board with your own board image link.
-   The board is assumed to be a 10x10 grid (cells 1-100) with alternating row directions.
+   The board is assumed to be a 10x10 grid numbered left-to-right in every row.
 */
 
-// Define snakes and ladders (as per your original positions)
+// Define snakes and ladders (positions per your rules)
 const snakes = {
   74: 52,
   46: 12,
@@ -169,7 +167,7 @@ let playerPositions = [];  // positions for each player (start at 0 = off-board)
 let currentPlayer = 0;
 let numberOfPlayers = 2;
 
-// Board dimensions (assumed same as CSS #board size)
+// Board dimensions (should match the CSS #board size)
 const boardSize = 600;
 const gridCount = 10;  // 10 columns and 10 rows
 const cellSize = boardSize / gridCount;
@@ -209,17 +207,12 @@ function getCoordinates(cellNum) {
   // If cellNum is 0 (off-board), return an off-screen position
   if (cellNum < 1) return { x: -50, y: -50 };
 
-  // Calculate the row from the bottom (0-indexed)
-  let rowFromBottom = Math.floor((cellNum - 1) / gridCount);
-  // Determine column: alternate direction per row (starting left-to-right for bottom row)
-  let col;
-  if (rowFromBottom % 2 === 0) {
-    col = (cellNum - 1) % gridCount;
-  } else {
-    col = gridCount - 1 - ((cellNum - 1) % gridCount);
-  }
-  // In CSS, (0,0) is the top left so we invert the row order:
-  let rowFromTop = gridCount - 1 - rowFromBottom;
+  // For a left-to-right board:
+  // Determine the column (0-indexed) and row (0-indexed from the bottom)
+  const col = (cellNum - 1) % gridCount;
+  const rowFromBottom = Math.floor((cellNum - 1) / gridCount);
+  // Convert row from bottom to row from top (since (0,0) is at top left)
+  const rowFromTop = gridCount - 1 - rowFromBottom;
   return { x: col * cellSize, y: rowFromTop * cellSize };
 }
 
@@ -227,7 +220,8 @@ function getCoordinates(cellNum) {
 function positionToken(playerIndex, cellNum) {
   const token = document.getElementById("player-token-" + playerIndex);
   const coords = getCoordinates(cellNum);
-  token.style.left = (coords.x + 20) + "px";  // offset to center inside a 60px cell (token 20px)
+  // Offset token to center within a cell (token size is 20px)
+  token.style.left = (coords.x + 20) + "px";
   token.style.top = (coords.y + 20) + "px";
 }
 
