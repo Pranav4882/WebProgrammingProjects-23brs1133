@@ -1,132 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Snakes & Ladders</title>
+<meta charset="UTF-8">
+<title>Snakes and Ladders</title>
 <style>
   body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #ffe4b5;
     margin: 0;
+    padding: 0;
+    background: #f0f0f0;
     font-family: Arial, sans-serif;
-  }
-  .container {
     text-align: center;
   }
-  canvas {
-    border: 5px solid #333;
-    background: url('snl.jpg') no-repeat;
-    background-size: cover;
-  }
   h1 {
-    font-size: 4rem;
-    color: #ff6347;
-    margin-bottom: 20px;
-  }
-  button {
     margin-top: 20px;
+  }
+  #game-container {
+    max-width: 900px;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  /* Board container with your custom board image */
+  #board {
+    width: 600px;
+    height: 600px;
+    background-image: url("snl4.jpg");
+    background-size: cover;
+    background-position: center;
+    border: 2px solid #444;
+    position: relative;
+  }
+  /* Player tokens */
+  .player-token {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #000;
+    text-align: center;
+    line-height: 16px;
+    font-weight: bold;
+    color: #fff;
+    pointer-events: none;
+  }
+  .player1 { background: red;    }
+  .player2 { background: blue;   }
+  .player3 { background: green;  }
+  .player4 { background: orange; }
+
+  /* Right panel with dice and info */
+  #right-panel {
+    width: 200px;
+    margin-left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #dice-container {
+    width: 100px;
+    height: 100px;
+    margin: 20px;
+    background: #fff;
+    border: 2px solid #444;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    position: relative;
+  }
+  /* Dice roll animation */
+  .rolling {
+    animation: rollDice 0.5s linear infinite;
+  }
+  @keyframes rollDice {
+    0%   { transform: rotate(0deg);   }
+    25%  { transform: rotate(90deg);  }
+    50%  { transform: rotate(180deg); }
+    75%  { transform: rotate(270deg); }
+    100% { transform: rotate(360deg); }
+  }
+  #roll-button {
     padding: 10px 20px;
-    font-size: 1.5rem;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
+    font-size: 16px;
+    margin-bottom: 20px;
     cursor: pointer;
   }
-  .dice {
-    margin: 20px;
-    font-size: 5rem;
-    height: 100px;
-    width: 100px;
-    line-height: 100px;
-    border-radius: 20px;
-    background-color: #fff;
-    border: 4px solid #333;
-    display: inline-block;
+  #message {
+    font-size: 18px;
+    min-height: 40px;
+  }
+  /* Winner animation overlay */
+  #winner-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    font-size: 40px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 999;
+  }
+  #winner-overlay.active {
+    display: flex;
+    animation: winnerAnimation 2s infinite;
+  }
+  @keyframes winnerAnimation {
+    0%   { background-color: rgba(0,0,0,0.8); }
+    50%  { background-color: rgba(0,0,0,0.6); }
+    100% { background-color: rgba(0,0,0,0.8); }
+  }
+  #winner-text {
+    margin-bottom: 20px;
+  }
+  #play-again {
+    padding: 10px 20px;
+    font-size: 24px;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Snakes & Ladders</h1>
-  <canvas id="board" width="600" height="600"></canvas>
-  <div id="dice" class="dice">🎲</div>
-  <button id="rollBtn">Roll Dice</button>
-  <p id="status"></p>
+
+<h1>Snakes and Ladders</h1>
+<div id="game-container">
+  <div id="board"></div>
+  <div id="right-panel">
+    <button id="roll-button">Roll Dice</button>
+    <div id="dice-container">-</div>
+    <div id="message"></div>
+  </div>
 </div>
+
+<!-- Winner Overlay -->
+<div id="winner-overlay">
+  <div id="winner-text">Player X Wins!</div>
+  <button id="play-again">Play Again</button>
+</div>
+
 <script>
-const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d');
-const size = 10;
-const tileSize = canvas.width / size;
-const players = [{ color: 'red', pos: 1 }, { color: 'blue', pos: 1 }];
+/* 
+   Snakes and Ladders game using a custom board image.
+   Replace the URL in CSS for #board with your own board image link.
+   The board is assumed to be a 10x10 grid (cells 1-100) with alternating row directions.
+*/
+
+// Define snakes and ladders (as per your original positions)
+const snakes = {
+  74: 52,
+  46: 12,
+  88: 76,
+  25: 6
+};
+
+const ladders = {
+  19: 66,
+  32: 53,
+  67: 100,
+  73: 91
+};
+
+// Game variables
+let playerPositions = [];  // positions for each player (start at 0 = off-board)
 let currentPlayer = 0;
-const snakes = { 14: 7, 19: 5, 22: 2, 29: 9, 35: 17, 48: 26, 53: 33, 64: 44, 79: 55, 93: 73 };
-const ladders = { 4: 14, 8: 30, 15: 34, 21: 42, 28: 76, 41: 60, 50: 71, 66: 87, 74: 94, 81: 99 };
+let numberOfPlayers = 2;
 
-drawPlayers();
+// Board dimensions (assumed same as CSS #board size)
+const boardSize = 600;
+const gridCount = 10;  // 10 columns and 10 rows
+const cellSize = boardSize / gridCount;
 
-function drawPlayers() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  players.forEach(player => {
-    const { x, y } = getCoordinates(player.pos);
-    ctx.beginPath();
-    ctx.arc(x + tileSize / 2, y + tileSize / 2, tileSize / 4, 0, Math.PI * 2);
-    ctx.fillStyle = player.color;
-    ctx.fill();
-  });
+// On load, ask number of players and initialize tokens
+window.onload = function() {
+  let p = prompt("How many players? (2-4)", "2");
+  numberOfPlayers = parseInt(p);
+  if (isNaN(numberOfPlayers) || numberOfPlayers < 2 || numberOfPlayers > 4) {
+    numberOfPlayers = 2;
+  }
+  for (let i = 0; i < numberOfPlayers; i++) {
+    playerPositions[i] = 0;  // start off-board
+  }
+  createPlayerTokens();
+  updateMessage("Player 1's turn. Roll the dice!");
+};
+
+// Create tokens for players and append them to the board
+function createPlayerTokens() {
+  // Remove any old tokens
+  const oldTokens = document.querySelectorAll(".player-token");
+  oldTokens.forEach(t => t.remove());
+
+  for (let i = 0; i < numberOfPlayers; i++) {
+    const token = document.createElement("div");
+    token.classList.add("player-token", "player" + (i+1));
+    token.id = "player-token-" + i;
+    token.innerText = (i+1);
+    document.getElementById("board").appendChild(token);
+    positionToken(i, 0);  // off-board at start
+  }
 }
 
-function getCoordinates(pos) {
-  const row = Math.floor((pos - 1) / size);
-  const col = row % 2 === 0 ? (pos - 1) % size : size - 1 - ((pos - 1) % size);
-  return { x: col * tileSize, y: (size - row - 1) * tileSize };
+// Convert cell number (1-100) to (x,y) coordinates on the board image
+function getCoordinates(cellNum) {
+  // If cellNum is 0 (off-board), return an off-screen position
+  if (cellNum < 1) return { x: -50, y: -50 };
+
+  // Calculate the row from the bottom (0-indexed)
+  let rowFromBottom = Math.floor((cellNum - 1) / gridCount);
+  // Determine column: alternate direction per row (starting left-to-right for bottom row)
+  let col;
+  if (rowFromBottom % 2 === 0) {
+    col = (cellNum - 1) % gridCount;
+  } else {
+    col = gridCount - 1 - ((cellNum - 1) % gridCount);
+  }
+  // In CSS, (0,0) is the top left so we invert the row order:
+  let rowFromTop = gridCount - 1 - rowFromBottom;
+  return { x: col * cellSize, y: rowFromTop * cellSize };
 }
 
-document.getElementById('rollBtn').addEventListener('click', rollDice);
+// Position a player's token based on the cell number
+function positionToken(playerIndex, cellNum) {
+  const token = document.getElementById("player-token-" + playerIndex);
+  const coords = getCoordinates(cellNum);
+  token.style.left = (coords.x + 20) + "px";  // offset to center inside a 60px cell (token 20px)
+  token.style.top = (coords.y + 20) + "px";
+}
+
+// Dice roll button event
+document.getElementById("roll-button").addEventListener("click", rollDice);
 
 function rollDice() {
-  const diceElement = document.getElementById('dice');
-  let roll = 1 + Math.floor(Math.random() * 6);
-  let animationCount = 10;
+  const diceContainer = document.getElementById("dice-container");
+  diceContainer.classList.add("rolling");
 
-  const animation = setInterval(() => {
-    diceElement.textContent = Math.ceil(Math.random() * 6);
-    animationCount--;
-    if (animationCount <= 0) {
-      clearInterval(animation);
-      diceElement.textContent = roll;
-      movePlayer(roll);
-    }
-  }, 100);
+  setTimeout(() => {
+    diceContainer.classList.remove("rolling");
+    const roll = Math.floor(Math.random() * 6) + 1;
+    diceContainer.innerText = roll;
+    movePlayer(roll);
+  }, 800);
 }
 
+// Move current player based on dice roll
 function movePlayer(roll) {
-  document.getElementById('status').innerText = `Player ${currentPlayer + 1} rolled a ${roll}`;
-  players[currentPlayer].pos += roll;
-
-  if (players[currentPlayer].pos > 100) {
-    players[currentPlayer].pos = 100;
-  }
-
-  if (snakes[players[currentPlayer].pos]) {
-    players[currentPlayer].pos = snakes[players[currentPlayer].pos];
-  } else if (ladders[players[currentPlayer].pos]) {
-    players[currentPlayer].pos = ladders[players[currentPlayer].pos];
-  }
-
-  if (players[currentPlayer].pos === 100) {
-    document.getElementById('status').innerText = `Player ${currentPlayer + 1} wins!`;
-    document.getElementById('rollBtn').disabled = true;
+  let newPos = playerPositions[currentPlayer] + roll;
+  if (newPos > 100) {
+    updateMessage(`Player ${currentPlayer + 1} must land exactly on 100. No move!`);
+    nextPlayer();
     return;
   }
+  playerPositions[currentPlayer] = newPos;
 
-  currentPlayer = (currentPlayer + 1) % players.length;
-  drawPlayers();
+  // Check for ladders or snakes
+  if (ladders[newPos]) {
+    playerPositions[currentPlayer] = ladders[newPos];
+    updateMessage(`Player ${currentPlayer + 1} climbed a ladder to ${ladders[newPos]}!`);
+  } else if (snakes[newPos]) {
+    playerPositions[currentPlayer] = snakes[newPos];
+    updateMessage(`Player ${currentPlayer + 1} got bitten by a snake and slid down to ${snakes[newPos]}!`);
+  } else {
+    updateMessage(`Player ${currentPlayer + 1} moved to ${playerPositions[currentPlayer]}.`);
+  }
+
+  positionToken(currentPlayer, playerPositions[currentPlayer]);
+
+  // Check win condition
+  if (playerPositions[currentPlayer] === 100) {
+    showWinner(currentPlayer);
+  } else {
+    nextPlayer();
+  }
 }
+
+// Move to next player's turn
+function nextPlayer() {
+  currentPlayer = (currentPlayer + 1) % numberOfPlayers;
+  updateMessage(`Player ${currentPlayer + 1}'s turn. Roll the dice!`);
+}
+
+// Update game message
+function updateMessage(msg) {
+  document.getElementById("message").innerText = msg;
+}
+
+// Display winner overlay with animation
+function showWinner(playerIndex) {
+  const overlay = document.getElementById("winner-overlay");
+  document.getElementById("winner-text").innerText = `Player ${playerIndex + 1} Wins!`;
+  overlay.classList.add("active");
+}
+
+// Restart game when "Play Again" is clicked
+document.getElementById("play-again").addEventListener("click", () => {
+  window.location.reload();
+});
 </script>
+
 </body>
 </html>
